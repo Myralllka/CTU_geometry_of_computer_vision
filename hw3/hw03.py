@@ -30,7 +30,11 @@ def Q2KRC(Q: np.ndarray):
     R = np.linalg.inv(K) @ (
             np.sign(np.linalg.det(M)) * M / np.linalg.norm(M[2]))
 
-    C = -np.linalg.inv(M) @ m
+    # C = -np.linalg.inv(M) @ m
+    # C = np.array([[C[0]], [C[1]], [C[2]]])
+    # C.reshape(3, 1)
+    c = slinalg.null_space(Q)
+    C = c[:-1] / c[-1]
     return K, R, C
 
 
@@ -82,8 +86,9 @@ if __name__ == "__main__":
 
     Q, points_sel, err_max, err_points, Q_all = estimate_Q(u, x, ix)
     K, R, C = Q2KRC(Q)
+    C_real = C.copy()
 
-    b1 = 5 * 10e-6
+    b1 = 5 * 10**(-6)
     f = K[0, 0] * b1
     A = (1 / f) * (K @ R)
     Pb = np.c_[A, -A @ C]
@@ -94,26 +99,22 @@ if __name__ == "__main__":
 
     Epsilon = Delta @ np.linalg.inv(R)
     e = C.copy()
-    e = np.array([[e[0]], [e[1]], [e[2]]])
 
     Nu = Epsilon @ np.linalg.inv(K)
     n = C.copy()
-    n = np.array([[n[0]], [n[1]], [n[2]]])
 
     Kappa = Delta * f
     k = d.copy()
-    # k = np.array([[k[0]], [k[1]], [k[2]]])
 
     Gamma = Kappa @ np.linalg.inv(R)
     g = C.copy()
-    g = np.array([[g[0]], [g[1]], [g[2]]])
 
     Beta = Nu * f
     b = C.copy()
-    b = np.array([[b[0]], [b[1]], [b[2]]])
 
     Alpha = Beta @ np.array([[1, 0], [0, 1], [0, 0]])
-    a = C + Beta[2]
+    C = np.array([C[0, 0], C[1, 0], C[2, 0]])
+    a = C + Beta[2].T
     a = np.array([[a[0]], [a[1]], [a[2]]])
 
     # for i in (a, b, g, d, e, k, n):
@@ -144,7 +145,7 @@ if __name__ == "__main__":
     plot_csystem(ax, Kappa, k, 'κ', 'brown')
     plot_csystem(ax, Nu, n, 'υ', 'cyan')
     ax.plot3D(x[0], x[1], x[2], "b.")
-    fig.savefig("03_figure1.pdf")
+    # fig.savefig("03_figure1.pdf")
 
     # Task 2
     # borders = 10
@@ -157,7 +158,7 @@ if __name__ == "__main__":
     plot_csystem(ax, Gamma, g, 'γ', 'blue')
     plot_csystem(ax, Alpha, a, 'α', 'green')
     ax.plot3D(x[0], x[1], x[2], 'b.')
-    fig.savefig("03_figure2.pdf")
+    # fig.savefig("03_figure2.pdf")
 
     # # Task 3
     fig = plt.figure()
@@ -172,5 +173,5 @@ if __name__ == "__main__":
     for q in Q_all:
         K, R, C = Q2KRC(q[0])
         ax.plot3D(C[0], C[1], C[2], 'r.')
-    plt.show()
-    fig.savefig("03_figure3.pdf")
+    # plt.show()
+    # fig.savefig("03_figure3.pdf")
