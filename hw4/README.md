@@ -1,0 +1,5 @@
+Create the function p3p\_distances for computing distances of three spatial points from a center of calibrated camera. The function must return the distances η\_i in N1, N2, N3 of the three points. Implement only the case 'A' of the computation. If there are more solutions, the returned variables are row vectors (matlab) or lists (python). If there is no solution by the case 'A', return empty vector/list ([]). For constructing the fourth order polynomial, there is the p3p_polynom function in the tools repository, that can be used in your code.
+
+The function p3p\_distances should return only such solutions, that are consistent with input arguments, i.e., that pass verification using cosine law (see below). Use (relative) threshold 1e-4.
+Create the function p3p\_dverify for verification of computed camera-to-point distances using the cosine law. Use this function in p3p\_distances. The function returns vector of three errors, one for each equation. Each computed error should be distance (not squared), relative to particular d\_jk
+
