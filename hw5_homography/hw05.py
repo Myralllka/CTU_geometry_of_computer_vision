@@ -76,8 +76,31 @@ def u2h_optim(u, u0):
     return res
 
 
-def color_normalization(img0, img1, H):
-    pass
+# def color_normalization(img, img0, u, u0):
+#     """
+#     Red + Green == Yellow
+#     :return:
+#     """
+#     tmp = [[], []]
+#     correction = {}
+#     for point in u.T:
+#         # print(point)
+#         tmp[0].append(tuple(img[round(point[1])][round(point[0])]))
+#     for point in u0.T:
+#         # print(point)
+#         tmp[1].append(tuple(img0[round(point[1])][round(point[0])]))
+#     for i in range(len(tmp[0])):
+#         correction[tmp[0][i]] = list(np.array(tmp[1][i]) - tmp[0][i])
+#     r, g, b = 0, 0, 0
+#     for i in correction.values():
+#         r += i[0]
+#         g += i[1]
+#         b += i[2]
+#     r /= len(u[0])
+#     g /= len(u[0])
+#     b /= len(u[0])
+#     print(r, g, b)
+#     return r, g, b
 
 
 if __name__ == "__main__":
@@ -107,6 +130,10 @@ if __name__ == "__main__":
     C = [[474.4, 508.2, 739.3, 737.2],
          [501.7, 347.0, 348.7, 506.7]]
 
+    U0 = [[i - 1 for i in U0[0]], [i - 1 for i in U0[1]]]
+    U = [[i - 1 for i in U[0]], [i - 1 for i in U[1]]]
+    C = [[i - 1 for i in C[0]], [i - 1 for i in C[1]]]
+
     _, H, inx = u2h_optim(U, U0)
 
     sio.savemat('05_homography.mat', {
@@ -126,9 +153,22 @@ if __name__ == "__main__":
 
     # Step 2
 
+    # m1 = (C[1][1] - C[1][0]) / (C[0][1] - C[0][0])
+    # m2 = (C[1][2] - C[1][1]) / (C[0][2] - C[0][1])
+    # m3 = (C[1][3] - C[1][2]) / (C[0][3] - C[0][2])
+    # m4 = (C[1][0] - C[1][3]) / (C[0][0] - C[0][3])
+    # b1 = C[1][0] - (m1 * C[0][0])
+    # b2 = C[1][1] - (m2 * C[0][1])
+    # b3 = C[1][2] - (m3 * C[0][2])
+    # b4 = C[1][3] - (m4 * C[0][3])
+    #
     # for i in range(len(img_10)):
     #     for j in range(len(img_10[0])):
-    #         if sum(img_10[i][j]) / 3 < 35:
+    #         if ((i > j * m1 + b1) and
+    #                 (i > j * m2 + b2) and
+    #                 (i < j * m3 + b3) and
+    #                 (i < j * m4 + b4)):
+    #             # if sum(img_10[i][j]) / 6 < 35:
     #             tmp = H @ np.array([j, i, 1])
     #             tmp /= tmp[-1]
     #             tmp = tmp[:-1]
@@ -140,7 +180,6 @@ if __name__ == "__main__":
     #                 t = img_00[round(tmp[1])][round(tmp[0])]
     #                 img_10[i][j] = t
     #
-    # black_points = np.array(black_points).T
     # plt.imshow(img_10)
     # plt.show()
     # fig.savefig("05_corrected.png")
