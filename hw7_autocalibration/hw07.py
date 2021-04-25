@@ -2,9 +2,11 @@ import numpy as np  # for matrix computation and linear algebra
 import matplotlib.pyplot as plt  # for drawing and image I/O
 import scipy.io as sio  # for matlab file format output
 import itertools  # for generating all combinations
-import scipy.linalg as slinalg
+import scipy.linalg
 import tools
-import SeqWriter
+import cv2
+import os
+
 from hw04a import p3p_distances
 
 
@@ -61,16 +63,33 @@ def cos_s(x1, x2, x3, K):
     return c12, c23, c31
 
 
-def plot_cube(tp, dn, im):
+def plot_cube(tp, dn):
     for i in range(4):
         plt.plot([tp[i][0], dn[i][0]], [tp[i][1], dn[i][1]], 'b-')
         plt.plot([tp[i - 1][0], tp[i][0]], [tp[i - 1][1], tp[i][1]], 'b-')
         plt.plot([dn[i - 1][0], dn[i][0]], [dn[i - 1][1], dn[i][1]], 'b-')
 
-    plt.imshow(im)
+
+def make_video():
+    video_name = '07_seq_wire.avi'
+
+    images = ["07_gif_{}.png".format(counter) for counter in range(0, 100)]
+    frame = cv2.imread(images[0])
+
+    height, width, layers = frame.shape
+    # print(height, width)
+    video = cv2.VideoWriter(video_name, 0, 60, (width, height))
+
+    for image in images:
+        video.write(cv2.imread(image))
+    for image in reversed(images):
+        video.write(cv2.imread(image))
+    cv2.destroyAllWindows()
+    video.release()
 
 
 if __name__ == "__main__":
+    # make_video()
 
     img1 = plt.imread("pokemon_10.jpg")
     img2 = plt.imread("pokemon_19.jpg")
@@ -240,12 +259,12 @@ if __name__ == "__main__":
     R1, Camera1 = p3p_RC([res[0][1], res[1][1], res[2][1]], points_x, points_u,
                          K)
 
-    points_u2 = np.array([[C2[0][0], C2[1][0]],
-                          [C2[0][1], C2[1][1]],
+    points_u2 = np.array([[C2[0][1], C2[1][1]],
+                          [C2[0][2], C2[1][2]],
                           [C2[0][3], C2[1][3]]])
 
-    points_x2 = np.array([[0, 0, 0],
-                          [0, 1, 0],
+    points_x2 = np.array([[0, 1, 0],
+                          [1, 1, 0],
                           [1, 0, 0]])
 
     c12, c23, c31 = cos_s(points_u2[0], points_u2[1], points_u2[2], K)
@@ -265,25 +284,65 @@ if __name__ == "__main__":
     cube = np.array([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0],
                      [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1]])
 
-    top_arr = []
-    down_arr = []
-    for i in range(4):
-        down = np.array([cube[i][0], cube[i][1], cube[i][2], 1])
-        top = np.array([cube[i + 4][0], cube[i + 4][1], cube[i + 4][2], 1])
-        down = P2 @ down
-        top = P2 @ top
-        down = (down / down[-1])[:-1]
-        top = (top / top[-1])[:-1]
-        # plt.plot(down[0], down[1], 'ro')
-        # plt.plot([top[0], down[0]], [top[1], down[1]], "b-")
-        down_arr.append(down)
-        top_arr.append(top)
-        # break
+    # top_arr = []
+    # down_arr = []
+    # for i in range(4):
+    #     down = np.array([cube[i][0], cube[i][1], cube[i][2], 1])
+    #     top = np.array([cube[i + 4][0], cube[i + 4][1], cube[i + 4][2], 1])
+    #     down = P2 @ down
+    #     top = P2 @ top
+    #     down = (down / down[-1])[:-1]
+    #     top = (top / top[-1])[:-1]
+    #     down_arr.append(down)
+    #     top_arr.append(top)
+    # break
 
-    plot_cube(top_arr, down_arr, img2)
-    plt.imshow(img2)
-    plt.savefig("07_box_wire2.pdf")
+    # plot_cube(top_arr, down_arr)
+    # plt.imshow(img2)
+    # plt.savefig("07_box_wire2.pdf")
     # plt.show()
+
+    # Step 3.3. Interpolation
+    counter = 0
+    for lmbd in [i / 20 for i in range(0, 21)]:
+        fig = plt.figure()
+        fig.clf()
+        # for lmbd in [0.5]:
+        c = Camera2 * lmbd + Camera1 * (1 - lmbd)
+        r = scipy.linalg.fractional_matrix_power(R2 @ R1.T, lmbd).real @ R1
+        p = np.c_[K @ r, (-K) @ r @ c]
+
+        H = P1[:, [0, 1, 3]] @ np.linalg.inv(p[:, [0, 1, 3]])
+        blank = np.full(img1.shape, 0, dtype="uint8")
+        # print(blank)
+        for y in range(img1.shape[0]):
+            for x in range(img1.shape[1]):
+                point = H @ np.array([x, y, 1])
+                point /= point[-1]
+                point = np.array([round(point[0]), round(point[1])])
+                if ((0 < point[1] < img1.shape[0])
+                        and (0 < point[0] < img1.shape[1])):
+                    blank[y][x] = img1[point[1]][point[0]]
+
+        top_arr = []
+        down_arr = []
+        for i in range(4):
+            down = np.array([cube[i][0], cube[i][1], cube[i][2], 1])
+            top = np.array([cube[i + 4][0], cube[i + 4][1], cube[i + 4][2], 1])
+            down = p @ down
+            top = p @ top
+            down = (down / down[-1])[:-1]
+            top = (top / top[-1])[:-1]
+            down_arr.append(down)
+            top_arr.append(top)
+        plot_cube(top_arr, down_arr)
+        plt.axis('off')
+        plt.imshow(blank)
+        plt.savefig("07_gif_{}.png".format(counter),
+                    bbox_inches='tight',
+                    pad_inches=0.0,
+                    dpi=400)
+        counter += 1
     # Step 4.1. Save data in Mat
 
     # Camera1 = np.array(Camera1).reshape(3, 1)
