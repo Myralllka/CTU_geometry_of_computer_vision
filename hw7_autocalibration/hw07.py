@@ -27,9 +27,9 @@ def p3p_RC(N, X, u, K):
         tmp = inv_K @ tmp
         new_u.append(tmp)
     u = new_u
-    X = np.array([[i[0], i[1], 1] for i in X])
+    # X = np.array([[i[0], i[1], 1] for i in X])
     Y = [N[i] * (u[i] / np.linalg.norm(u[i])) for i in range(3)]
-    print(Y)
+
     Z2e = (Y[1] - Y[0]).reshape(3, )
     Z2d = (X[1] - X[0]).reshape(3, )
     Z3e = (Y[2] - Y[0]).reshape(3, )
@@ -39,7 +39,6 @@ def p3p_RC(N, X, u, K):
     R = np.c_[Z1e, Z2e, Z3e] @ np.linalg.inv(np.c_[Z1d, Z2d, Z3d])
     C = X[0].reshape(3, ) - (R.T @ Y[0].reshape(3, ))
     C = C.reshape(3, 1)
-
     return R, C
 
 
@@ -62,6 +61,15 @@ def cos_s(x1, x2, x3, K):
     return c12, c23, c31
 
 
+def plot_cube(tp, dn, im):
+    for i in range(4):
+        plt.plot([tp[i][0], dn[i][0]], [tp[i][1], dn[i][1]], 'b-')
+        plt.plot([tp[i - 1][0], tp[i][0]], [tp[i - 1][1], tp[i][1]], 'b-')
+        plt.plot([dn[i - 1][0], dn[i][0]], [dn[i - 1][1], dn[i][1]], 'b-')
+
+    plt.imshow(im)
+
+
 if __name__ == "__main__":
 
     img1 = plt.imread("pokemon_10.jpg")
@@ -73,11 +81,17 @@ if __name__ == "__main__":
     C2 = [[571.6, 384.9, 571.4, 755.5],
           [541.8, 420.6, 333.8, 434.6]]
 
+    u = [[119.1, 463.7, 988.8, 798.0, 473.4, 507.2, 738.3, 736.2],
+         [597.9, 218.7, 321.2, 813.5, 500.7, 346.0, 347.7, 505.7]]
+
     C_outer = [[119.1, 463.7, 988.8, 798.0],
                [597.9, 218.7, 321.2, 813.5]]
 
     C2_outer = [[397.4, 153.8, 701.0, 1104.9],
                 [822.7, 345.3, 241.6, 582.8]]
+
+    u2 = [[397.4, 153.8, 701.0, 1104.9, 571.6, 384.9, 571.4, 755.5],
+          [822.7, 345.3, 241.6, 582.8, 541.8, 420.6, 333.8, 434.6]]
 
     Ck, Cb, Cko, Cbo = [], [], [], []
     Ck2, Cb2, Cko2, Cbo2 = [], [], [], []
@@ -164,62 +178,126 @@ if __name__ == "__main__":
     # [vp1[0][0], vp1[0][1], 1] * [[1, 0, O13],[0, 1, O23],[O13 O23 O33]] [vp1[1][0], vp1[1][1], 1]
     # [vp1[0][0] + vp1[1][0], vp1[0][1] + vp1[1][1], 1] * [O12, O23, O33] = -(vp1[1][0]*vp1[0][0] + vp1[1][1]*vp1[0][1])
     # [vp1[2][0] + vp1[3][0], vp1[2][1] + vp1[3][1], 1] * [O12, O23, O33] = -(vp1[3][0]*vp1[2][0] + vp1[3][1]*vp1[2][1])
-    # [vp2[0][0] + vp2[1][0], vp2[0][1] + vp2[1][1], 1] * [O12, O23, O33] = -(vp2[1][0]*vp2[0][0] + vp2[1][1]*vp1[0][1])
+    # [vp2[0][0] + vp2[1][0], vp2[0][1] + vp2[1][1], 1] * [O12, O23, O33] = -(vp2[1][0]*vp2[0][0] + vp2[1][1]*vp2[0][1])
     # Code
 
-    A = np.array([[vp1[0][0] + vp1[1][0], vp1[0][1] + vp1[1][1], 1],
+    A = np.array([[vp2[2][0] + vp2[3][0], vp2[2][1] + vp2[3][1], 1],
                   [vp1[2][0] + vp1[3][0], vp1[2][1] + vp1[3][1], 1],
-                  [vp2[0][0] + vp2[1][0], vp2[0][1] + vp2[1][1], 1]])
+                  [vp1[0][0] + vp1[1][0], vp1[0][1] + vp1[1][1], 1]])
 
-    b = np.array([-(vp1[1][0] * vp1[0][0] + vp1[1][1] * vp1[0][1]),
+    b = np.array([-(vp2[3][0] * vp2[2][0] + vp2[3][1] * vp2[2][1]),
                   -(vp1[3][0] * vp1[2][0] + vp1[3][1] * vp1[2][1]),
-                  -(vp2[1][0] * vp2[0][0] + vp2[1][1] * vp1[0][1])])
+                  -(vp1[1][0] * vp1[0][0] + vp1[1][1] * vp1[0][1])])
 
     o = np.linalg.solve(A, b)
-
     k13 = -o[0]
     k23 = -o[1]
     k11 = pow((o[2] - k13 ** 2 - k23 ** 2), .5)
     K = np.array([[k11, 0, k13],
                   [0, k11, k23],
                   [0, 0, 1]])
-
     K_inv = np.linalg.inv(K)
-
     # Step 2.2 Angle between sqr and rect
+    ANGLE = 0
 
-    angle = ((np.array([X1, Y1, 1]) @ K_inv.T
-              @ K_inv @ np.array([X3, Y3, 1])) /
-             (np.linalg.norm(K_inv @ np.array([X1, Y1, 1])) *
-              np.linalg.norm(K_inv @ np.array([X3, Y3, 1]))))
-    angle = np.degrees(np.arccos(angle))
+    ANGLE += ((np.array([X1, Y1, 1]) @ K_inv.T @ K_inv @ np.array(
+            [X3, Y3, 1])) /
+              (np.linalg.norm(K_inv @ np.array([X1, Y1, 1])) *
+               np.linalg.norm(K_inv @ np.array([X3, Y3, 1]))))
+    ANGLE += ((np.array([X2, Y2, 1]) @ K_inv.T @ K_inv @ np.array(
+            [X4, Y4, 1])) /
+              (np.linalg.norm(K_inv @ np.array([X2, Y2, 1])) *
+               np.linalg.norm(K_inv @ np.array([X4, Y4, 1]))))
+    ANGLE += ((np.array([X5, Y5, 1]) @ K_inv.T
+               @ K_inv @ np.array([X7, Y7, 1])) /
+              (np.linalg.norm(K_inv @ np.array([X5, Y5, 1])) *
+               np.linalg.norm(K_inv @ np.array([X7, Y7, 1]))))
+    ANGLE += ((np.array([X6, Y6, 1]) @ K_inv.T
+               @ K_inv @ np.array([X8, Y8, 1])) /
+              (np.linalg.norm(K_inv @ np.array([X6, Y6, 1])) *
+               np.linalg.norm(K_inv @ np.array([X8, Y8, 1]))))
+    ANGLE /= 4
+    ANGLE = np.arccos(ANGLE)
 
     # Step 3.1 find R1, R2, C1, C2 using p3p
 
     points_u = np.array([[C[0][0], C[1][0]],
                          [C[0][1], C[1][1]],
-                         [C[0][2], C[1][2]]])
-    points_x = np.array([i / np.linalg.norm(i) for i in points_u])
+                         [C[0][3], C[1][3]]])
+
+    points_x = np.array([[0, 0, 0],
+                         [0, 1, 0],
+                         [1, 0, 0]])
 
     c12, c23, c31 = cos_s(points_u[0], points_u[1], points_u[2], K)
+
     d12 = np.linalg.norm(points_x[1] - points_x[0])
     d23 = np.linalg.norm(points_x[2] - points_x[1])
     d31 = np.linalg.norm(points_x[0] - points_x[2])
+
     res = p3p_distances(d12, d23, d31, c12, c23, c31)
 
-    R1, C1 = p3p_RC([res[0][0], res[1][0], res[2][0]], points_x, points_u, K)
+    R1, Camera1 = p3p_RC([res[0][1], res[1][1], res[2][1]], points_x, points_u,
+                         K)
 
     points_u2 = np.array([[C2[0][0], C2[1][0]],
                           [C2[0][1], C2[1][1]],
-                          [C2[0][2], C2[1][2]]])
-    points_x2 = np.array([i / np.linalg.norm(i) for i in points_u2])
+                          [C2[0][3], C2[1][3]]])
+
+    points_x2 = np.array([[0, 0, 0],
+                          [0, 1, 0],
+                          [1, 0, 0]])
 
     c12, c23, c31 = cos_s(points_u2[0], points_u2[1], points_u2[2], K)
+
     d12 = np.linalg.norm(points_x2[1] - points_x2[0])
     d23 = np.linalg.norm(points_x2[2] - points_x2[1])
     d31 = np.linalg.norm(points_x2[0] - points_x2[2])
+
     res = p3p_distances(d12, d23, d31, c12, c23, c31)
 
-    R2, C2 = p3p_RC([res[0][0], res[1][0], res[2][0]], points_x2, points_u2, K)
+    R2, Camera2 = p3p_RC([res[0][1], res[1][1], res[2][1]], points_x2,
+                         points_u2, K)
 
     # Step 3.2 create a virtual object. Place a cube on the image...
+    P1 = np.c_[K @ R1, (-K) @ R1 @ Camera1]
+    P2 = np.c_[K @ R2, (-K) @ R2 @ Camera2]
+    cube = np.array([[0, 0, 0], [0, 1, 0], [1, 1, 0], [1, 0, 0],
+                     [0, 0, 1], [0, 1, 1], [1, 1, 1], [1, 0, 1]])
+
+    top_arr = []
+    down_arr = []
+    for i in range(4):
+        down = np.array([cube[i][0], cube[i][1], cube[i][2], 1])
+        top = np.array([cube[i + 4][0], cube[i + 4][1], cube[i + 4][2], 1])
+        down = P2 @ down
+        top = P2 @ top
+        down = (down / down[-1])[:-1]
+        top = (top / top[-1])[:-1]
+        # plt.plot(down[0], down[1], 'ro')
+        # plt.plot([top[0], down[0]], [top[1], down[1]], "b-")
+        down_arr.append(down)
+        top_arr.append(top)
+        # break
+
+    plot_cube(top_arr, down_arr, img2)
+    plt.imshow(img2)
+    plt.savefig("07_box_wire2.pdf")
+    # plt.show()
+    # Step 4.1. Save data in Mat
+
+    # Camera1 = np.array(Camera1).reshape(3, 1)
+    # Camera2 = np.array(Camera2).reshape(3, 1)
+    # vp1 = np.array(vp1).T
+    # vp2 = np.array(vp2).T
+    # sio.savemat('07_data.mat', {
+    #     'u1': u,
+    #     'u2': u2,
+    #     'R1': R1,
+    #     'R2': R2,
+    #     'C1': Camera1,
+    #     'C2': Camera2,
+    #     'vp1': vp1,
+    #     'vp2': vp2,
+    #     'K': K,
+    #     'angle': ANGLE})
