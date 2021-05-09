@@ -5,21 +5,22 @@ import itertools  # for generating all combinations
 import scipy.linalg
 import math
 
-ixs = []
-
 
 def shortest_distance(p, lnn) -> float:
     return abs((lnn[0] * p[0] + lnn[1] * p[1] + lnn[2])) / (
         math.sqrt(lnn[0] ** 2 + lnn[1] ** 2))
 
 
-def u2F(u1, u2):
+def u2F(u1, u2, U1=None, U2=None):
     # computes the fundamental matrix using the seven-point algorithm from 7
     # euclidean correspondences u1, u2, measured in two images. For
     # constructing the third order polynomial from null space matrices G1 and G2
+
     result_F_errors = []
-    # u1 = u1.reshape(2, 14)
-    # u2 = u2.reshape(2, 14)
+    if U1 is None:
+        U1 = u1
+        U2 = u2
+
     for inx in itertools.combinations(range(0, len(u1[0])), 7):
         u1_current = u1[:, inx]
         u2_current = u2[:, inx]
@@ -49,11 +50,11 @@ def u2F(u1, u2):
             if np.linalg.matrix_rank(G) != 2:
                 continue
             point_errors = []
-            for counter in range(len(u1[0])):
-                a1 = np.array([u1[0][counter],
-                               u1[1][counter], 1])
-                a2 = np.array([u2[0][counter],
-                               u2[1][counter], 1])
+            for counter in range(len(U1[0])):
+                a1 = np.array([U1[0][counter],
+                               U1[1][counter], 1])
+                a2 = np.array([U2[0][counter],
+                               U2[1][counter], 1])
                 ep1 = G.T @ a2
                 ep2 = G @ a1
                 d1_i = shortest_distance(a1, ep1)
@@ -104,8 +105,11 @@ def u2F_polynom(g1: np.array, g2: np.array):
 if __name__ == "__main__":
     img1 = plt.imread('daliborka_01.jpg')
     img2 = plt.imread('daliborka_23.jpg')
-    f = sio.loadmat("daliborka_01_23-uu.mat")
+    ixs = []
 
+    f = sio.loadmat("daliborka_01_23-uu.mat")
+    U1 = f["u01"]
+    U2 = f["u23"]
     # indices of a points, that form an edge
     # edges = f["edges"]  # - 1
     # list of 12 indices of points ix
@@ -124,7 +128,7 @@ if __name__ == "__main__":
     u1 = u01[:, ix]
     u2 = u23[:, ix]
 
-    F = u2F(u1, u2)
+    F = u2F(u1, u2, u01, u23)
 
     #  Step 2. Draw the 12 corresponding points in different colour in the two
     #  images. Using the best F, compute the corresponding epipolar lines and
@@ -199,13 +203,12 @@ if __name__ == "__main__":
     plt.plot(d1_arr, color="b", label="image 1")
     plt.plot(d2_arr, color='g', label='image 2')
     plt.legend(loc='best')
+    # plt.savefig("08_errors.pdf")
     plt.show()
 
-    # plt.savefig("08_errors.pdf")
     # Step 4. Save all the data into 08_data.mat: the input data u1, u2, ix,
     # the indices of the 7 points used for computing the optimal F as point_sel
     # and the matrix F.
-
 
     sio.savemat('08_data.mat', {
         'u1': u01,
