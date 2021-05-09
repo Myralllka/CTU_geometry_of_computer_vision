@@ -5,10 +5,16 @@ import itertools  # for generating all combinations
 import scipy.linalg
 
 
+def shortest_distance(p, lnn) -> float:
+    return np.abs((lnn[0] * p[0] + lnn[1] * p[1] + lnn[2])) / (
+        np.sqrt(lnn[0] ** 2 + lnn[1] ** 2))
+
+
 def u2F(u1, u2):
     # computes the fundamental matrix using the seven-point algorithm from 7
     # euclidean correspondences u1, u2, measured in two images. For
     # constructing the third order polynomial from null space matrices G1 and G2
+    result_F_errors = []
     for inx in itertools.combinations(range(0, 12), 7):
         u1_current = u1[:, inx]
         u2_current = u2[:, inx]
@@ -24,25 +30,37 @@ def u2F(u1, u2):
         result = scipy.linalg.null_space(tmp_G)
         G1 = result.T[0].reshape(3, 3)
         G2 = result.T[1].reshape(3, 3)
-        polynom = u2F_polynom(G1, G2)
-        roots = np.roots(polynom)
+        polynomial = u2F_polynom(G1, G2)
+        roots = np.roots(polynomial)
+
+        result_FFs = []
+        max_error = []
         for root in roots:
             if np.iscomplex(root):
                 continue
             else:
-                G = G1 + root * G2
-                if np.array_equal(G, G2):
-                    continue
-                else:
-                    for counter in range(12):
-                        a1 = np.array([u1[0][counter],
-                                       u1[1][counter], 1])
-                        a2 = np.array([u2[0][counter],
-                                       u2[1][counter], 1])
-                        ep1 = G @ a1
-                        ep2 = G.T @ a2
-                        # print(ep1)
-                        # print(ep2)
+                root = np.real(root)
+            G = G1 + root * G2
+            if np.array_equal(G, G2):
+                continue
+            else:
+                point_errors = []
+                for counter in range(12):
+                    a1 = np.array([u1[0][counter],
+                                   u1[1][counter], 1])
+                    a2 = np.array([u2[0][counter],
+                                   u2[1][counter], 1])
+                    ep1 = G.T @ a2
+                    ep2 = G @ a1
+                    point_errors.append(shortest_distance(a1, ep1) +
+                                        shortest_distance(a2, ep2))
+                result_FFs.append(G)
+                max_error.append(max(point_errors))
+        result_F_errors.append([max(max_error), result_FFs])
+    result_F_errors.sort(key=lambda x: x[0])
+
+    return result_F_errors[0][1]
+
 
 def u2F_polynom(q: np.array, p: np.array):
     # %U2F_POLYNOM  Coefficients of polynomial for 7-point algorithm
@@ -73,7 +91,7 @@ def u2F_polynom(q: np.array, p: np.array):
          q[0, 1] * p[1, 2] - q[0, 0] * q[2, 1] * p[1, 2]
 
     a0 = np.linalg.det(q)
-    return [a0, a1, a2, a3]
+    return [a3, a2, a1, a0]
 
 
 if __name__ == "__main__":
@@ -105,6 +123,9 @@ if __name__ == "__main__":
     #  draw them into the images in corresponding colours (a line segment given
     #  by the intersection of the image area and a line must me computed).
     #  Export as 08_eg.pdf.
+    colors = ["dimgray", "rosybrown", "maroon", "peru",
+              "moccasin", "yellow", "olivedrab", "lightgreen",
+              "navy", "royalblue", "indigo", "hotpink"]
 
     # Step 3. Draw graphs of epipolar errors d1_i and d2_i for all points
     # (point index on horizontal axis, the error on vertical axis). Draw both
