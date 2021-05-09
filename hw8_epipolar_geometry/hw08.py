@@ -9,7 +9,8 @@ ixs = []
 
 
 def shortest_distance(p, lnn) -> float:
-    return abs((lnn[0] * p[0] + lnn[1] * p[1] + lnn[2])) / (math.sqrt(lnn[0] ** 2 + lnn[1] ** 2))
+    return abs((lnn[0] * p[0] + lnn[1] * p[1] + lnn[2])) / (
+        math.sqrt(lnn[0] ** 2 + lnn[1] ** 2))
 
 
 def u2F(u1, u2):
@@ -29,9 +30,7 @@ def u2F(u1, u2):
             tmp_G.append(np.c_[a2[0] * a1[0], a2[0] * a1[1], a2[0] * a1[2],
                                a2[1] * a1[0], a2[1] * a1[1], a2[1] * a2[2],
                                a2[2] * a1[0], a2[2] * a1[1], a2[2] * a1[2]])
-        tmp_G = np.array(tmp_G)
-        tmp_G = tmp_G.reshape(7, 9)
-        result = scipy.linalg.null_space(tmp_G)
+        result = scipy.linalg.null_space(np.array(tmp_G).reshape(7, 9))
         G1 = result.T[0].reshape(3, 3)
         G2 = result.T[1].reshape(3, 3)
         polynomial = u2F_polynom(G1, G2)
@@ -78,22 +77,25 @@ def u2F_polynom(g1: np.array, g2: np.array):
     # ".replace("1", "0").replace("2", "1").replace("3", "2")
     a3 = np.linalg.det(g2)
 
-    a2 = g2[1, 0] * g2[2, 1] * g1[0, 2] - g2[1, 0] * g2[0, 1] * g1[2, 2] + g2[0, 0] * \
-         g2[1, 1] * g1[2, 2] + g2[2, 0] * g1[0, 1] * g2[1, 2] + g2[2, 0] * g2[0, 1] * \
-         g1[1, 2] - g2[0, 0] * g1[2, 1] * g2[1, 2] - g2[2, 0] * g1[1, 1] * g2[0, 2] - \
-         g2[2, 0] * g2[1, 1] * g1[0, 2] - g2[0, 0] * g2[2, 1] * g1[1, 2] + g1[1, 0] * \
-         g2[2, 1] * g2[0, 2] + g2[1, 0] * g1[2, 1] * g2[0, 2] + g1[2, 0] * g2[0, 1] * \
-         g2[1, 2] - g1[1, 0] * g2[0, 1] * g2[2, 2] - g1[0, 0] * g2[1, 2] * g2[2, 1] - \
-         g2[1, 0] * g1[0, 1] * g2[2, 2] + g2[0, 0] * g1[1, 1] * g2[2, 2] + g1[0, 0] * \
-         g2[1, 1] * g2[2, 2] - g1[2, 0] * g2[1, 1] * g2[0, 2]
-    a1 = g1[0, 0] * g1[1, 1] * g2[2, 2] + g1[0, 0] * g2[1, 1] * g1[2, 2] + g2[2, 0] * \
-         g1[0, 1] * g1[1, 2] - g1[1, 0] * g1[0, 1] * g2[2, 2] - g2[0, 0] * g1[2, 1] * \
-         g1[1, 2] - g2[1, 0] * g1[0, 1] * g1[2, 2] - g2[2, 0] * g1[1, 1] * g1[0, 2] + \
-         g2[0, 0] * g1[1, 1] * g1[2, 2] + g1[1, 0] * g1[2, 1] * g2[0, 2] + g1[1, 0] * \
-         g2[2, 1] * g1[0, 2] + g1[2, 0] * g2[0, 1] * g1[1, 2] - g1[1, 0] * g2[0, 1] * \
-         g1[2, 2] - g1[2, 0] * g2[1, 1] * g1[0, 2] + g2[1, 0] * g1[2, 1] * g1[0, 2] - \
-         g1[0, 0] * g2[2, 1] * g1[1, 2] - g1[2, 0] * g1[1, 1] * g2[0, 2] + g1[2, 0] * \
-         g1[0, 1] * g2[1, 2] - g1[0, 0] * g1[2, 1] * g2[1, 2]
+    a2 = (g2[1, 0] * g2[2, 1] * g1[0, 2] - g2[1, 0] * g2[0, 1] * g1[2, 2] +
+          g2[0, 0] * g2[1, 1] * g1[2, 2] + g2[2, 0] * g1[0, 1] * g2[1, 2] +
+          g2[2, 0] * g2[0, 1] * g1[1, 2] - g2[0, 0] * g1[2, 1] * g2[1, 2] -
+          g2[2, 0] * g1[1, 1] * g2[0, 2] - g2[2, 0] * g2[1, 1] * g1[0, 2] -
+          g2[0, 0] * g2[2, 1] * g1[1, 2] + g1[1, 0] * g2[2, 1] * g2[0, 2] +
+          g2[1, 0] * g1[2, 1] * g2[0, 2] + g1[2, 0] * g2[0, 1] * g2[1, 2] -
+          g1[1, 0] * g2[0, 1] * g2[2, 2] - g1[0, 0] * g2[1, 2] * g2[2, 1] -
+          g2[1, 0] * g1[0, 1] * g2[2, 2] + g2[0, 0] * g1[1, 1] * g2[2, 2] +
+          g1[0, 0] * g2[1, 1] * g2[2, 2] - g1[2, 0] * g2[1, 1] * g2[0, 2])
+
+    a1 = (g1[0, 0] * g1[1, 1] * g2[2, 2] + g1[0, 0] * g2[1, 1] * g1[2, 2] +
+          g2[2, 0] * g1[0, 1] * g1[1, 2] - g1[1, 0] * g1[0, 1] * g2[2, 2] -
+          g2[0, 0] * g1[2, 1] * g1[1, 2] - g2[1, 0] * g1[0, 1] * g1[2, 2] -
+          g2[2, 0] * g1[1, 1] * g1[0, 2] + g2[0, 0] * g1[1, 1] * g1[2, 2] +
+          g1[1, 0] * g1[2, 1] * g2[0, 2] + g1[1, 0] * g2[2, 1] * g1[0, 2] +
+          g1[2, 0] * g2[0, 1] * g1[1, 2] - g1[1, 0] * g2[0, 1] * g1[2, 2] -
+          g1[2, 0] * g2[1, 1] * g1[0, 2] + g2[1, 0] * g1[2, 1] * g1[0, 2] -
+          g1[0, 0] * g2[2, 1] * g1[1, 2] - g1[2, 0] * g1[1, 1] * g2[0, 2] +
+          g1[2, 0] * g1[0, 1] * g2[1, 2] - g1[0, 0] * g1[2, 1] * g2[1, 2])
 
     a0 = np.linalg.det(g1)
     return [a3, a2, a1, a0]
@@ -173,40 +175,42 @@ if __name__ == "__main__":
     plt.imshow(img2)
 
     plt.show()
+
     # fig.savefig("08_eg.pdf")
     # Step 3. Draw graphs of epipolar errors d1_i and d2_i for all points
     # (point index on horizontal axis, the error on vertical axis). Draw both
     # graphs into single figure (different colours) and export as 08_errors.pdf
 
-    # fig = plt.figure()
-    # fig.clf()
-    # d1_arr, d2_arr = [], []
-    # for i in range(len(u01[0])):
-    #     a1 = np.array([u01[0][i],
-    #                    u01[1][i], 1])
-    #     a2 = np.array([u23[0][i],
-    #                    u23[1][i], 1])
-    #     ep1 = F[0].T @ a2
-    #     ep2 = F[0] @ a1
-    #     d1_arr.append(shortest_distance(a1, ep1))
-    #     d2_arr.append(shortest_distance(a2, ep2))
-    # plt.title('The epipolar error for all points')
-    # plt.xlabel('point index')
-    # plt.ylabel('epipolar err [px]')
-    # plt.plot(d1_arr, color="b", label="image 1")
-    # plt.plot(d2_arr, color='g', label='image 2')
-    # plt.legend(loc='best')
-    # plt.savefig("08_errors.pdf")
-    # plt.show()
+    fig = plt.figure()
+    fig.clf()
+    d1_arr, d2_arr = [], []
+    for i in range(len(u01[0])):
+        a1 = np.array([u01[0][i],
+                       u01[1][i], 1])
+        a2 = np.array([u23[0][i],
+                       u23[1][i], 1])
+        ep1 = F[0].T @ a2
+        ep2 = F[0] @ a1
+        d1_arr.append(shortest_distance(a1, ep1))
+        d2_arr.append(shortest_distance(a2, ep2))
+    plt.title('The epipolar error for all points')
+    plt.xlabel('point index')
+    plt.ylabel('epipolar err [px]')
+    plt.plot(d1_arr, color="b", label="image 1")
+    plt.plot(d2_arr, color='g', label='image 2')
+    plt.legend(loc='best')
+    plt.show()
 
+    # plt.savefig("08_errors.pdf")
     # Step 4. Save all the data into 08_data.mat: the input data u1, u2, ix,
     # the indices of the 7 points used for computing the optimal F as point_sel
     # and the matrix F.
 
-    # sio.savemat('08_data.mat', {
-    #     'u1': u01,
-    #     'u2': u23,
-    #     'ix': ix,
-    #     "point_sel": [ix[i] for i in range(12) if i in ixs],
-    #     'F': F[0]
-    #     })
+
+    sio.savemat('08_data.mat', {
+        'u1': u01,
+        'u2': u23,
+        'ix': ix,
+        "point_sel": [ix[i] for i in range(12) if i in ixs],
+        'F': F[0]
+        })
