@@ -11,62 +11,38 @@ def shortest_distance(p, lnn) -> float:
         math.sqrt(lnn[0] ** 2 + lnn[1] ** 2))
 
 
-def u2F(u1, u2, U1=None, U2=None):
+def u2F(u1, u2):
     # computes the fundamental matrix using the seven-point algorithm from 7
     # euclidean correspondences u1, u2, measured in two images. For
     # constructing the third order polynomial from null space matrices G1 and G2
+    # for inx in itertools.combinations(range(0, len(u1[0])), 7):
 
-    result_F_errors = []
-    if U1 is None:
-        U1 = u1
-        U2 = u2
+    tmp_G = list()
+    for counter in range(7):
+        a1 = np.array([u1[0][counter], u1[1][counter], 1])
+        a2 = np.array([u2[0][counter], u2[1][counter], 1])
+        tmp_G.append(np.c_[a2[0] * a1[0], a2[0] * a1[1], a2[0] * a1[2],
+                           a2[1] * a1[0], a2[1] * a1[1], a2[1] * a1[2],
+                           a2[2] * a1[0], a2[2] * a1[1], a2[2] * a1[2]])
+    result = scipy.linalg.null_space(np.array(tmp_G).reshape(7, 9))
+    G1 = result.T[0].reshape(3, 3)
+    G2 = result.T[1].reshape(3, 3)
+    polynomial = u2F_polynom(G1, G2)
+    roots = np.roots(polynomial)
 
-    for inx in itertools.combinations(range(0, len(u1[0])), 7):
-        u1_current = u1[:, inx]
-        u2_current = u2[:, inx]
-        tmp_G = list()
-        for counter in range(7):
-            a1 = np.array([u1_current[0][counter], u1_current[1][counter], 1])
-            a2 = np.array([u2_current[0][counter], u2_current[1][counter], 1])
-            tmp_G.append(np.c_[a2[0] * a1[0], a2[0] * a1[1], a2[0] * a1[2],
-                               a2[1] * a1[0], a2[1] * a1[1], a2[1] * a1[2],
-                               a2[2] * a1[0], a2[2] * a1[1], a2[2] * a1[2]])
-        result = scipy.linalg.null_space(np.array(tmp_G).reshape(7, 9))
-        G1 = result.T[0].reshape(3, 3)
-        G2 = result.T[1].reshape(3, 3)
-        polynomial = u2F_polynom(G1, G2)
-        roots = np.roots(polynomial)
+    result_FFs = []
+    for root in roots:
+        if np.iscomplex(root):
+            continue
+        root = np.real(root)
+        G = G1 + root * G2
+        if np.array_equal(G, G2):
+            continue
+        if np.linalg.matrix_rank(G) != 2:
+            continue
+        result_FFs.append(G)
 
-        result_FFs = []
-        max_error = []
-
-        for root in roots:
-            if np.iscomplex(root):
-                continue
-            root = np.real(root)
-            G = G1 + root * G2
-            if np.array_equal(G, G2):
-                continue
-            if np.linalg.matrix_rank(G) != 2:
-                continue
-            point_errors = []
-            for counter in range(len(U1[0])):
-                a1 = np.array([U1[0][counter],
-                               U1[1][counter], 1])
-                a2 = np.array([U2[0][counter],
-                               U2[1][counter], 1])
-                ep1 = G.T @ a2
-                ep2 = G @ a1
-                d1_i = shortest_distance(a1, ep1)
-                d2_i = shortest_distance(a2, ep2)
-                point_errors.append(d1_i + d2_i)
-                result_FFs.append(G)
-                max_error.append(max(point_errors))
-        result_F_errors.append([max(max_error), result_FFs, inx])
-    result_F_errors.sort(key=lambda x: x[0])
-    global ixs
-    ixs = result_F_errors[0][2]
-    return result_F_errors[0][1]
+    return result_FFs
 
 
 def u2F_polynom(g1: np.array, g2: np.array):
@@ -128,8 +104,31 @@ if __name__ == "__main__":
     u1 = u01[:, ix]
     u2 = u23[:, ix]
 
-    F = u2F(u1, u2, u01, u23)
+    result_F_errors_inxs = []
+    result_FFs = []
 
+    for inx in itertools.combinations(range(0, len(u1[0])), 7):
+        u1_current = u1[:, inx]
+        u2_current = u2[:, inx]
+        Fs = u2F(u1_current, u2_current)
+        for each_F in Fs:
+            point_errors = []
+            for counter in range(len(u01[0])):
+                a1 = np.array([u01[0][counter],
+                               u01[1][counter],
+                               1])
+                a2 = np.array([u23[0][counter],
+                               u23[1][counter],
+                               1])
+                ep1 = each_F.T @ a2
+                ep2 = each_F @ a1
+                d1_i = shortest_distance(a1, ep1)
+                d2_i = shortest_distance(a2, ep2)
+                point_errors.append(d1_i + d2_i)
+            result_F_errors_inxs.append([max(point_errors), each_F, inx])
+    result_F_errors_inxs.sort(key=lambda x: x[0])
+    F = result_F_errors_inxs[0][1]
+    ixs = result_F_errors_inxs[0][2]
     #  Step 2. Draw the 12 corresponding points in different colour in the two
     #  images. Using the best F, compute the corresponding epipolar lines and
     #  draw them into the images in corresponding colours (a line segment given
@@ -153,7 +152,7 @@ if __name__ == "__main__":
         point2 = np.c_[x_p2, y_p2, 1].reshape(3, 1)
 
         x = np.linspace(1, 1200, 1200)
-        ep1 = F[0].T @ point2
+        ep1 = F.T @ point2
         y = -((ep1[2] / ep1[1]) + x * ep1[0] / ep1[1])
         plt.plot(x, y, color=colors[i])
         i += 1
@@ -172,7 +171,7 @@ if __name__ == "__main__":
 
         x = np.linspace(1, 1200, 1200)
         point1 = point1.reshape(3, 1)
-        ep2 = F[0] @ point1
+        ep2 = F @ point1
         y = -((ep2[2] / ep2[1]) + x * ep2[0] / ep2[1])
         plt.plot(x, y, color=colors[i])
         i += 1
@@ -180,7 +179,7 @@ if __name__ == "__main__":
 
     plt.show()
 
-    # fig.savefig("08_eg.pdf")
+    fig.savefig("08_eg.pdf")
     # Step 3. Draw graphs of epipolar errors d1_i and d2_i for all points
     # (point index on horizontal axis, the error on vertical axis). Draw both
     # graphs into single figure (different colours) and export as 08_errors.pdf
@@ -193,8 +192,8 @@ if __name__ == "__main__":
                        u01[1][i], 1])
         a2 = np.array([u23[0][i],
                        u23[1][i], 1])
-        ep1 = F[0].T @ a2
-        ep2 = F[0] @ a1
+        ep1 = F.T @ a2
+        ep2 = F @ a1
         d1_arr.append(shortest_distance(a1, ep1))
         d2_arr.append(shortest_distance(a2, ep2))
     plt.title('The epipolar error for all points')
@@ -203,7 +202,7 @@ if __name__ == "__main__":
     plt.plot(d1_arr, color="b", label="image 1")
     plt.plot(d2_arr, color='g', label='image 2')
     plt.legend(loc='best')
-    # plt.savefig("08_errors.pdf")
+    plt.savefig("08_errors.pdf")
     plt.show()
 
     # Step 4. Save all the data into 08_data.mat: the input data u1, u2, ix,
@@ -215,5 +214,5 @@ if __name__ == "__main__":
         'u2': u23,
         'ix': ix,
         "point_sel": [ix[i] for i in range(12) if i in ixs],
-        'F': F[0]
+        'F': F
         })
