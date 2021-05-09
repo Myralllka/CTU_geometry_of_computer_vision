@@ -28,7 +28,7 @@ def u2F(u1, u2):
             a1 = np.array([u1_current[0][counter], u1_current[1][counter], 1])
             a2 = np.array([u2_current[0][counter], u2_current[1][counter], 1])
             tmp_G.append(np.c_[a2[0] * a1[0], a2[0] * a1[1], a2[0] * a1[2],
-                               a2[1] * a1[0], a2[1] * a1[1], a2[1] * a2[2],
+                               a2[1] * a1[0], a2[1] * a1[1], a2[1] * a1[2],
                                a2[2] * a1[0], a2[2] * a1[1], a2[2] * a1[2]])
         result = scipy.linalg.null_space(np.array(tmp_G).reshape(7, 9))
         G1 = result.T[0].reshape(3, 3)
