@@ -167,12 +167,12 @@ if __name__ == "__main__":
     # Step 4
     # Display the images, draw the input points as blue dots and the scene points X projected by appropriate P_i as red circles. Draw also the edges, connecting the original points as yellow lines. Export as 09_reprojection.pdf.
 
-    step4(u01, u23, X, P1, P2, edges)
+    # step4(u01, u23, X, P1, P2, edges)
 
     # Step 5
     # Draw graph of reprojection errors and export as 09_errorsr.pdf.
 
-    step5(u01, u23, X, P1, P2)
+    # step5(u01, u23, X, P1, P2)
 
     # Step 6
     # Draw the 3D point set (using 3D plotting facility) connected by the edges as a wire-frame model, shown from the top of the tower, from the side, and from some general view. Export as 09_view1.pdf, 09_view2.pdf, and 09_view3.pdf.
@@ -180,11 +180,11 @@ if __name__ == "__main__":
     # Step 7
     # Save Fe, E, R, C, P1, P2, X, and u1, u2, point_sel_e as 09b_data.mat.
 
-    # sio.savemat('09a_data.mat', {
+    # sio.savemat('09b_data.mat', {
     #     'u1': u01,
     #     'u2': u23,
     #     "Fe": sio.loadmat("09a_data.mat")["Fe"],
-    #     "E": sio.loadmat("09a_data.mat")["E"],
+    #     "E": E,
     #     "R": R,
     #     "C": C,
     #     "P1": P1,
