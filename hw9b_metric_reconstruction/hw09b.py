@@ -5,16 +5,68 @@ import itertools  # for generating all combinations
 import scipy.linalg as slinalg
 
 
+def step5(u1_c, u2_c, X, P1_c, P2_c):
+    fig = plt.figure()
+    fig.clf()
+    d1_arr, d2_arr = [], []
+    for each_X, i in zip(X, range(len(X))):
+        X_loop = np.array([each_X[0], each_X[1], each_X[2], 1])
+        reprojected = P1 @ X_loop
+        reprojected = (reprojected / reprojected[-1])[:-1]
+        print(reprojected)
+        print(np.array([u1_c[0][i], u1_c[1][i]]))
+        d1_arr.append(np.linalg.norm(reprojected - np.array([u1_c[0][i], u1_c[1][i]])))
+        reprojected = P2 @ X_loop
+        reprojected = (reprojected / reprojected[-1])[:-1]
+        d2_arr.append(np.linalg.norm(reprojected - np.array([u2_c[0][i], u2_c[1][i]])))
+
+    plt.title("Reprojection errors")
+    plt.xlabel('point index')
+    plt.ylabel('Reprojection err [px]')
+    plt.plot(d1_arr, color="b", label="image 1")
+    plt.plot(d2_arr, color='g', label='image 2')
+    plt.legend(loc='best')
+    plt.savefig("09_errorsr.pdf")
+    plt.show()
+
+
+def step4(u1_c, u2_c, X, P1_c, P2_c, angls):
+    fig = plt.figure()
+    fig.clf()
+
+    fig.suptitle("The corresponding points and edges")
+
+    plt.subplot(121)
+    for i, j in zip(angls[0], angls[1]):
+        plt.plot([u1_c[0][i], u1_c[0][j]], [u1_c[1][i], u1_c[1][j]], 'y-')
+    for each_X in X:
+        reprojected = P1 @ np.array([each_X[0], each_X[1], each_X[2], 1])
+        reprojected /= reprojected[-1]
+        plt.plot(reprojected[0], reprojected[1], 'ro')
+    plt.plot(u1_c[0], u1_c[1], 'b.')
+    plt.imshow(img1)
+    ##########################################
+    plt.subplot(122)
+    for i, j in zip(angls[0], angls[1]):
+        plt.plot([u2_c[0][i], u2_c[0][j]], [u2_c[1][i], u2_c[1][j]], 'y-')
+    for each_X in X:
+        reprojected = P2 @ np.array([each_X[0], each_X[1], each_X[2], 1])
+        reprojected /= reprojected[-1]
+        plt.plot(reprojected[0], reprojected[1], 'ro')
+    plt.plot(u2_c[0], u2_c[1], 'b.')
+    plt.imshow(img2)
+    plt.show()
+    fig.savefig("09_reprojection.pdf")
+
+
 def e2rc(E_e2rc):
-    # E = R cros C
+    # E = R cross C, decomposition:
     Rx = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
     Rz = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
     G_norm = E_e2rc / np.linalg.norm(E_e2rc, ord="fro")
     U, _, V = np.linalg.svd(E_e2rc)
-    # W = U @ Rz
     R1 = U @ Rz @ V
     R2 = U @ Rx.T @ V
-    # R_c = np.sign(np.linalg.det(W)) * W @ V * np.sign(np.linalg.det(V))
     C1 = V[2]
     C2 = -C1
     return R1, R2, C1, C2
@@ -48,24 +100,17 @@ def optimize_rc(R1_current, C1_current, R2_current, C2_current, K_current,
                          (K_current @ R_loop @ C_loop).reshape(
                                  3, 1), axis=1)
         X = compute_Xs(u_current_1, u_current_2, P1_c, P2_c)
-        # for i in range(len(u_current_1[0])):
-        #     u_tmp = np.array([u_current_1[0][i],
-        #                       u_current_1[1][i], 1]).reshape(3, 1)
-        #     v_tmp = np.array([u_current_2[0][i],
-        #                       u_current_2[1][i], 1]).reshape(3, 1)
-        #     M = np.vstack([np.hstack([u_tmp, np.zeros((3, 1)), -P1_c]),
-        #                    np.hstack([np.zeros((3, 1)), v_tmp, -P2_c])])
-        #     _, _, Vh = np.linalg.svd(M)
-        #     X = Vh[-1, 2:5] / Vh[-1, -1]
         for each, i in zip(X, range(len(X))):
             u_tmp = np.array([u_current_1[0][i],
                               u_current_1[1][i], 1]).reshape(3, 1)
             v_tmp = np.array([u_current_2[0][i],
                               u_current_2[1][i], 1]).reshape(3, 1)
-            if (np.dot(each, u_tmp) / (np.linalg.norm(each) * np.linalg.norm(u_tmp)) > 0) and \
-                    (np.dot(each, v_tmp) / (np.linalg.norm(each) * np.linalg.norm(v_tmp)) > 0):
+            if (np.dot(each, u_tmp) / (
+                    np.linalg.norm(each) * np.linalg.norm(u_tmp)) > 0) and \
+                    (np.dot(each, v_tmp) / (
+                            np.linalg.norm(each) * np.linalg.norm(v_tmp)) > 0):
                 counter += 1
-        print(counter)
+        # print(counter)
         result_index_R_C_Ps.append([counter, R_loop, C_loop, P1_c, P2_c])
     return max(result_index_R_C_Ps, key=lambda x: x[0])
 
@@ -78,6 +123,7 @@ if __name__ == "__main__":
     f = sio.loadmat("daliborka_01_23-uu.mat")
 
     K = sio.loadmat('K.mat')["K"]
+
     # indices of a points, that form an edge
     edges = f["edges"]  # - 1
     edges = np.array([edges[0] - 1, edges[1] - 1])
@@ -116,11 +162,17 @@ if __name__ == "__main__":
     # Step 3
     # Compute scene points X.
 
+    X = compute_Xs(u01, u23, P1, P2)
+
     # Step 4
     # Display the images, draw the input points as blue dots and the scene points X projected by appropriate P_i as red circles. Draw also the edges, connecting the original points as yellow lines. Export as 09_reprojection.pdf.
 
+    step4(u01, u23, X, P1, P2, edges)
+
     # Step 5
     # Draw graph of reprojection errors and export as 09_errorsr.pdf.
+
+    step5(u01, u23, X, P1, P2)
 
     # Step 6
     # Draw the 3D point set (using 3D plotting facility) connected by the edges as a wire-frame model, shown from the top of the tower, from the side, and from some general view. Export as 09_view1.pdf, 09_view2.pdf, and 09_view3.pdf.
