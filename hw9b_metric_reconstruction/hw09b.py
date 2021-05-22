@@ -20,6 +20,20 @@ def e2rc(E_e2rc):
     return R1, R2, C1, C2
 
 
+def compute_Xs(u_current_1, u_current_2, P1_c, P2_c):
+    res_X = []
+    for i in range(len(u_current_1[0])):
+        u_tmp = np.array([u_current_1[0][i],
+                          u_current_1[1][i], 1]).reshape(3, 1)
+        v_tmp = np.array([u_current_2[0][i],
+                          u_current_2[1][i], 1]).reshape(3, 1)
+        M = np.vstack([np.hstack([u_tmp, np.zeros((3, 1)), -P1_c]),
+                       np.hstack([np.zeros((3, 1)), v_tmp, -P2_c])])
+        _, _, Vh = np.linalg.svd(M)
+        res_X.append(Vh[-1, 2:5] / Vh[-1, -1])
+    return res_X
+
+
 def optimize_rc(R1_current, C1_current, R2_current, C2_current, K_current,
                 u_current_1, u_current_2):
     result_index_R_C_Ps = []
@@ -33,17 +47,23 @@ def optimize_rc(R1_current, C1_current, R2_current, C2_current, K_current,
         P2_c = np.append(K_current @ R_loop,
                          (K_current @ R_loop @ C_loop).reshape(
                                  3, 1), axis=1)
-        for i in range(len(u_current_1[0])):
+        X = compute_Xs(u_current_1, u_current_2, P1_c, P2_c)
+        # for i in range(len(u_current_1[0])):
+        #     u_tmp = np.array([u_current_1[0][i],
+        #                       u_current_1[1][i], 1]).reshape(3, 1)
+        #     v_tmp = np.array([u_current_2[0][i],
+        #                       u_current_2[1][i], 1]).reshape(3, 1)
+        #     M = np.vstack([np.hstack([u_tmp, np.zeros((3, 1)), -P1_c]),
+        #                    np.hstack([np.zeros((3, 1)), v_tmp, -P2_c])])
+        #     _, _, Vh = np.linalg.svd(M)
+        #     X = Vh[-1, 2:5] / Vh[-1, -1]
+        for each, i in zip(X, range(len(X))):
             u_tmp = np.array([u_current_1[0][i],
                               u_current_1[1][i], 1]).reshape(3, 1)
             v_tmp = np.array([u_current_2[0][i],
                               u_current_2[1][i], 1]).reshape(3, 1)
-            M = np.vstack([np.hstack([u_tmp, np.zeros((3, 1)), -P1_c]),
-                           np.hstack([np.zeros((3, 1)), v_tmp, -P2_c])])
-            _, _, Vh = np.linalg.svd(M)
-            X = Vh[-1, 2:5] / Vh[-1, -1]
-            if np.dot(X, u_tmp) / (
-                    np.linalg.norm(X) * np.linalg.norm(u_tmp)) > 0:
+            if (np.dot(each, u_tmp) / (np.linalg.norm(each) * np.linalg.norm(u_tmp)) > 0) and \
+                    (np.dot(each, v_tmp) / (np.linalg.norm(each) * np.linalg.norm(v_tmp)) > 0):
                 counter += 1
         print(counter)
         result_index_R_C_Ps.append([counter, R_loop, C_loop, P1_c, P2_c])
