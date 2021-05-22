@@ -1,4 +1,5 @@
 import numpy as np  # for matrix computation and linear algebra
+from mpl_toolkits import mplot3d
 import matplotlib.pyplot as plt  # for drawing and image I/O
 import scipy.io as sio  # for matlab file format output
 import itertools  # for generating all combinations
@@ -13,12 +14,12 @@ def step5(u1_c, u2_c, X, P1_c, P2_c):
         X_loop = np.array([each_X[0], each_X[1], each_X[2], 1])
         reprojected = P1 @ X_loop
         reprojected = (reprojected / reprojected[-1])[:-1]
-        print(reprojected)
-        print(np.array([u1_c[0][i], u1_c[1][i]]))
-        d1_arr.append(np.linalg.norm(reprojected - np.array([u1_c[0][i], u1_c[1][i]])))
+        d1_arr.append(np.linalg.norm(reprojected -
+                                     np.array([u1_c[0][i], u1_c[1][i]])))
         reprojected = P2 @ X_loop
         reprojected = (reprojected / reprojected[-1])[:-1]
-        d2_arr.append(np.linalg.norm(reprojected - np.array([u2_c[0][i], u2_c[1][i]])))
+        d2_arr.append(np.linalg.norm(reprojected -
+                                     np.array([u2_c[0][i], u2_c[1][i]])))
 
     plt.title("Reprojection errors")
     plt.xlabel('point index')
@@ -26,7 +27,7 @@ def step5(u1_c, u2_c, X, P1_c, P2_c):
     plt.plot(d1_arr, color="b", label="image 1")
     plt.plot(d2_arr, color='g', label='image 2')
     plt.legend(loc='best')
-    plt.savefig("09_errorsr.pdf")
+    # plt.savefig("09_errorsr.pdf")
     plt.show()
 
 
@@ -40,7 +41,7 @@ def step4(u1_c, u2_c, X, P1_c, P2_c, angls):
     for i, j in zip(angls[0], angls[1]):
         plt.plot([u1_c[0][i], u1_c[0][j]], [u1_c[1][i], u1_c[1][j]], 'y-')
     for each_X in X:
-        reprojected = P1 @ np.array([each_X[0], each_X[1], each_X[2], 1])
+        reprojected = P1_c @ np.array([each_X[0], each_X[1], each_X[2], 1])
         reprojected /= reprojected[-1]
         plt.plot(reprojected[0], reprojected[1], 'ro')
     plt.plot(u1_c[0], u1_c[1], 'b.')
@@ -50,24 +51,24 @@ def step4(u1_c, u2_c, X, P1_c, P2_c, angls):
     for i, j in zip(angls[0], angls[1]):
         plt.plot([u2_c[0][i], u2_c[0][j]], [u2_c[1][i], u2_c[1][j]], 'y-')
     for each_X in X:
-        reprojected = P2 @ np.array([each_X[0], each_X[1], each_X[2], 1])
+        reprojected = P2_c @ np.array([each_X[0], each_X[1], each_X[2], 1])
         reprojected /= reprojected[-1]
         plt.plot(reprojected[0], reprojected[1], 'ro')
     plt.plot(u2_c[0], u2_c[1], 'b.')
     plt.imshow(img2)
     plt.show()
-    fig.savefig("09_reprojection.pdf")
+    # fig.savefig("09_reprojection.pdf")
 
 
 def e2rc(E_e2rc):
     # E = R cross C, decomposition:
     Rx = np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]])
     Rz = np.array([[0, 1, 0], [-1, 0, 0], [0, 0, 1]])
-    G_norm = E_e2rc / np.linalg.norm(E_e2rc, ord="fro")
+    # E_e2rc = np.sqrt(2) * E_e2rc / np.linalg.norm(E_e2rc, ord="fro")
     U, _, V = np.linalg.svd(E_e2rc)
     R1 = U @ Rz @ V
     R2 = U @ Rx.T @ V
-    C1 = V[2]
+    C1 = V[-1]
     C2 = -C1
     return R1, R2, C1, C2
 
@@ -96,9 +97,7 @@ def optimize_rc(R1_current, C1_current, R2_current, C2_current, K_current,
                            [R2_current, C1_current],
                            [R2_current, C2_current]]:
         counter = 0
-        P2_c = np.append(K_current @ R_loop,
-                         (K_current @ R_loop @ C_loop).reshape(
-                                 3, 1), axis=1)
+        P2_c = np.append(K_current @ R_loop, (K_current @ R_loop @ C_loop).reshape(3, 1), axis=1)
         X = compute_Xs(u_current_1, u_current_2, P1_c, P2_c)
         for each, i in zip(X, range(len(X))):
             u_tmp = np.array([u_current_1[0][i],
@@ -110,9 +109,8 @@ def optimize_rc(R1_current, C1_current, R2_current, C2_current, K_current,
                     (np.dot(each, v_tmp) / (
                             np.linalg.norm(each) * np.linalg.norm(v_tmp)) > 0):
                 counter += 1
-        # print(counter)
         result_index_R_C_Ps.append([counter, R_loop, C_loop, P1_c, P2_c])
-    return max(result_index_R_C_Ps, key=lambda x: x[0])
+    return sorted(result_index_R_C_Ps, key=lambda x: x[0])[-1]
 
 
 if __name__ == "__main__":
@@ -135,16 +133,6 @@ if __name__ == "__main__":
     u01 = np.array([u01[0] - 1, u01[1] - 1])
     u23 = np.array([u23[0] - 1, u23[1] - 1])
 
-    # u01_gamma = [np.linalg.inv(K) @ i for i in u01]
-    # u23_gamma = [np.linalg.inv(K) @ i for i in u23]
-
-    # u1 = u01_gamma[:, ix]
-    # u2 = u23_gamma[:, ix]
-
-    colors = ["dimgray", "rosybrown", "maroon", "peru",
-              "moccasin", "yellow", "olivedrab", "lightgreen",
-              "navy", "royalblue", "indigo", "hotpink"]
-
     # Step 1
     # Decompose the best E into relative rotation R and translation C
     # (four solutions). Choose such a solution that reconstructs (most of)
@@ -157,8 +145,7 @@ if __name__ == "__main__":
     # Step 2
     # Construct projective matrices P1, P2 (including K).
     _, R, C, P1, P2 = optimize_rc(R1, R2, C1, C2, K, u01, u23)
-    print(E)
-    print(np.cross(R, C))
+
     # Step 3
     # Compute scene points X.
 
@@ -167,28 +154,52 @@ if __name__ == "__main__":
     # Step 4
     # Display the images, draw the input points as blue dots and the scene points X projected by appropriate P_i as red circles. Draw also the edges, connecting the original points as yellow lines. Export as 09_reprojection.pdf.
 
-    # step4(u01, u23, X, P1, P2, edges)
+    step4(u01, u23, X, P1, P2, edges)
 
     # Step 5
     # Draw graph of reprojection errors and export as 09_errorsr.pdf.
 
-    # step5(u01, u23, X, P1, P2)
+    step5(u01, u23, X, P1, P2)
 
     # Step 6
-    # Draw the 3D point set (using 3D plotting facility) connected by the edges as a wire-frame model, shown from the top of the tower, from the side, and from some general view. Export as 09_view1.pdf, 09_view2.pdf, and 09_view3.pdf.
+    # Draw the 3D point set (using 3D plotting facility) connected
+    # by the edges as a wire-frame model, shown from the top of the tower,
+    # from the side, and from some general view. Export as 09_view1.pdf,
+    # 09_view2.pdf, and 09_view3.pdf.
+
+    X = np.array(X).T
+
+    fig = plt.figure()
+    plt.title('Model reconstruction')
+    ax = plt.axes(projection='3d')
+    for idx in range(edges.shape[1]):
+        i = edges[0, idx]
+        j = edges[1, idx]
+        ax.plot([X[0, i], X[0, j]], [X[1, i], X[1, j]], [X[2, i], X[2, j]],
+                color="black")
+
+    # borders = 3
+    # ax.axes.set_xlim3d(left=-borders, right=borders)
+    # ax.axes.set_ylim3d(bottom=-borders, top=borders)
+    # ax.axes.set_zlim3d(bottom=-borders, top=borders)
+
+    ax.plot3D(X[0], X[1], X[2], 'b.')
+
+    plt.show()
+    # fig.savefig("04_scene.pdf")
 
     # Step 7
     # Save Fe, E, R, C, P1, P2, X, and u1, u2, point_sel_e as 09b_data.mat.
 
-    # sio.savemat('09b_data.mat', {
-    #     'u1': u01,
-    #     'u2': u23,
-    #     "Fe": sio.loadmat("09a_data.mat")["Fe"],
-    #     "E": E,
-    #     "R": R,
-    #     "C": C,
-    #     "P1": P1,
-    #     "P2": P2,
-    #     "X": X,
-    #     "point_sel_e": sio.loadmat("09a_data.mat")["point_sel_e"],
-    #     })
+    sio.savemat('09b_data.mat', {
+        'u1': u01,
+        'u2': u23,
+        "Fe": sio.loadmat("09a_data.mat")["Fe"],
+        "E": E,
+        "R": R,
+        "C": C.reshape(3, 1),
+        "P1": P1,
+        "P2": P2,
+        "X": X,
+        "point_sel_e": sio.loadmat("09a_data.mat")["point_sel_e"],
+        })
